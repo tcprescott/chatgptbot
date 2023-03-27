@@ -1,6 +1,7 @@
 import asyncio
 import random
 from typing import List
+import re
 
 import discord
 import openai
@@ -14,6 +15,8 @@ discordbot = discord.Client(
     intents=discord.Intents.all(),
     allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
 )
+
+REGEX_USERS_AND_ROLES = re.compile(r'<@!?\d+>|<@&\d+>')
 
 openai.api_key = settings.OPENAI_API_KEY
 
@@ -47,21 +50,21 @@ async def on_message(message: discord.Message):
             elif message.mentions and discordbot.user in message.mentions:
                 chatgpt_message_history.append({
                     "role": "user",
-                    "content": message.clean_content,
+                    "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
                 })
             else:
                 message_history = message.channel.history(limit=5)
                 history = [
                     {
                         "role": "assistant" if m.author == discordbot.user else "user",
-                        "content": m.clean_content,
+                        "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content),
                     }
                     async for m in message_history if m != message and m.author != discordbot.user
                 ]
                 history.reverse()
                 history.append({
                     "role": "user",
-                    "content": message.clean_content,
+                    "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
                 })
                 chatgpt_message_history.extend(history)
             response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
@@ -77,7 +80,7 @@ async def get_reply_history(message: discord.Message):
         messages.append(
             {
                 "role": "assistant" if message.author == discordbot.user else "user",
-                "content": message.clean_content,
+                "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
             }
         )
         if message.reference:
