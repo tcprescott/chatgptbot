@@ -3,3 +3,5 @@ DISCORD_BOT_TOKEN = ""
 CHANNEL_ID = 000000000000000000
 
 OPENAI_API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+initial_context = "You are a Discord bot."
