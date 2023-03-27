@@ -45,7 +45,10 @@ async def on_message(message: discord.Message):
             if message.reference:
                 chatgpt_message_history.extend(await get_reply_history(message))
             elif message.mentions and discordbot.user in message.mentions:
-                pass
+                chatgpt_message_history.append({
+                    "role": "user",
+                    "content": message.content,
+                })
             else:
                 message_history = message.channel.history(limit=5)
                 history = [
