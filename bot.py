@@ -36,14 +36,27 @@ async def on_message(message: discord.Message):
             return
 
         try:
-            # message_history = message.channel.history(limit=5)
             chatgpt_message_history = [
                 {
                     "role": "system",
                     "content": settings.initial_context,
                 }
             ]
-            chatgpt_message_history.extend(await get_reply_history(message))
+            if message.reference:
+                chatgpt_message_history.extend(await get_reply_history(message))
+            elif message.mentions and discordbot.user in message.mentions:
+                pass
+            else:
+                message_history = message.channel.history(limit=5)
+                history = [
+                    {
+                        "role": "assistant" if m.author == discordbot.user else "user",
+                        "content": m.content,
+                    }
+                    async for m in message_history
+                ]
+                history.reverse()
+                chatgpt_message_history.extend(history)
             response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
             await message.reply(response)
             # await message.reply("debug response")
@@ -109,7 +122,7 @@ async def chatgpt_completion(history: List[dict]):
             model="gpt-3.5-turbo",
             messages=history,
             temperature=1,
-            max_tokens=100,
+            max_tokens=256,
         )
         return response.choices[0].message.content
 
