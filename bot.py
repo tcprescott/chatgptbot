@@ -53,7 +53,7 @@ async def on_message(message: discord.Message):
                         "role": "assistant" if m.author == discordbot.user else "user",
                         "content": m.content,
                     }
-                    async for m in message_history if m != message
+                    async for m in message_history if m != message and m.author != discordbot.user
                 ]
                 history.reverse()
                 history.append({
