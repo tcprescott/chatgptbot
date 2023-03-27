@@ -53,9 +53,13 @@ async def on_message(message: discord.Message):
                         "role": "assistant" if m.author == discordbot.user else "user",
                         "content": m.content,
                     }
-                    async for m in message_history
+                    async for m in message_history if m != message
                 ]
                 history.reverse()
+                history.append({
+                    "role": "user",
+                    "content": message.content,
+                })
                 chatgpt_message_history.extend(history)
             response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
             await message.reply(response)
