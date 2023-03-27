@@ -4,6 +4,7 @@ from typing import List
 
 import discord
 import openai
+import datetime
 
 import settings
 
@@ -16,6 +17,8 @@ discordbot = discord.Client(
 
 openai.api_key = settings.OPENAI_API_KEY
 
+rate_limits = {}
+
 
 @discordbot.event
 async def on_ready():
@@ -27,10 +30,11 @@ async def on_message(message: discord.Message):
     if message.author == discordbot.user:
         return
 
-    if not message.channel.id == settings.CHANNEL_ID:
-        return
+    if rlmode := should_respond(message):
+        if is_rate_limited(message.author) and rlmode == 1:
+            await message.add_reaction("⏱️")
+            return
 
-    if should_respond(message):
         try:
             # message_history = message.channel.history(limit=5)
             chatgpt_message_history = [
@@ -40,10 +44,11 @@ async def on_message(message: discord.Message):
                 }
             ]
             chatgpt_message_history.extend(await get_reply_history(message))
-            response = await asyncio.wait_for(send_to_chatgpt(chatgpt_message_history), timeout=10)
+            response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
             await message.reply(response)
+            # await message.reply("debug response")
         except asyncio.TimeoutError:
-            print("busy")
+            await message.add_reaction("⌚")
 
 
 async def get_reply_history(message: discord.Message):
@@ -69,40 +74,44 @@ def should_respond(message: discord.Message):
     Returns True if the bot should respond to the message.
     """
     if message.author == discordbot.user:
-        return False
+        return 0
 
     if message.author.bot:
-        return False
+        return 0
 
-    if not message.channel.id == settings.CHANNEL_ID:
-        return False
+    if not message.channel.id in settings.CHANNEL_ID:
+        return 0
 
     if message.content.endswith("?"):
-        return True
+        return 1
 
     if (message.mentions and discordbot.user in message.mentions):
-        return True
+        return 1
 
     if (random.random() < 0.05):
-        return True
+        return 2
 
+    return 0
+
+
+def is_rate_limited(member: discord.Member):
+    if member.id in rate_limits:
+        if datetime.datetime.now() < rate_limits[member.id] + datetime.timedelta(seconds=30):
+            return True
+
+    rate_limits[member.id] = datetime.datetime.now()
     return False
 
 
-async def send_to_chatgpt(history: List[dict]):
-    async with semaphore:
-        task = asyncio.create_task(chatgpt_completion(history))
-        return await task
-
-
 async def chatgpt_completion(history: List[dict]):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=history,
-        temperature=1,
-        max_tokens=100,
-    )
-    return response.choices[0].message.content
+    async with semaphore:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=history,
+            temperature=1,
+            max_tokens=100,
+        )
+        return response.choices[0].message.content
 
 
 if __name__ == "__main__":
