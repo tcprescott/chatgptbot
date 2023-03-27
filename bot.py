@@ -31,9 +31,9 @@ async def on_message(message: discord.Message):
         return
 
     if rlmode := should_respond(message):
-        if is_rate_limited(message.author) and rlmode == 1:
-            await message.add_reaction("⏱️")
-            return
+        # if is_rate_limited(message.author) and rlmode == 1:
+        #     await message.add_reaction("⏱️")
+        #     return
 
         try:
             chatgpt_message_history = [
