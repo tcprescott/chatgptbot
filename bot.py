@@ -47,21 +47,21 @@ async def on_message(message: discord.Message):
             elif message.mentions and discordbot.user in message.mentions:
                 chatgpt_message_history.append({
                     "role": "user",
-                    "content": message.content,
+                    "content": message.clean_content,
                 })
             else:
                 message_history = message.channel.history(limit=5)
                 history = [
                     {
                         "role": "assistant" if m.author == discordbot.user else "user",
-                        "content": m.content,
+                        "content": m.clean_content,
                     }
                     async for m in message_history if m != message and m.author != discordbot.user
                 ]
                 history.reverse()
                 history.append({
                     "role": "user",
-                    "content": message.content,
+                    "content": message.clean_content,
                 })
                 chatgpt_message_history.extend(history)
             response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
@@ -77,7 +77,7 @@ async def get_reply_history(message: discord.Message):
         messages.append(
             {
                 "role": "assistant" if message.author == discordbot.user else "user",
-                "content": message.content,
+                "content": message.clean_content,
             }
         )
         if message.reference:
