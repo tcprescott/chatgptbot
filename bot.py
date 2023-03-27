@@ -125,7 +125,7 @@ async def chatgpt_completion(history: List[dict]):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=history,
-            temperature=1,
+            temperature=0.8,
             max_tokens=256,
         )
         return response.choices[0].message.content
