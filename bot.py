@@ -45,31 +45,33 @@ async def on_message(message: discord.Message):
                     "content": settings.initial_context,
                 }
             ]
-            if message.reference:
-                chatgpt_message_history.extend(await get_reply_history(message))
-            elif message.mentions and discordbot.user in message.mentions:
-                chatgpt_message_history.append({
-                    "role": "user",
-                    "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
-                })
-            else:
-                message_history = message.channel.history(limit=5)
-                history = [
-                    {
-                        "role": "assistant" if m.author == discordbot.user else "user",
-                        "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content),
-                    }
-                    async for m in message_history if m != message and m.author != discordbot.user
-                ]
-                history.reverse()
-                history.append({
-                    "role": "user",
-                    "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
-                })
-                chatgpt_message_history.extend(history)
-            response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
-            await message.reply(response)
-            # await message.reply("debug response")
+            async with message.channel.typing():
+                if message.reference:
+                    chatgpt_message_history.extend(await get_reply_history(message))
+                elif message.mentions and discordbot.user in message.mentions:
+                    chatgpt_message_history.append({
+                        "role": "user",
+                        "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
+                    })
+                else:
+                    message_history = message.channel.history(limit=8)
+                    history = [
+                        {
+                            "role": "assistant" if m.author == discordbot.user else "user",
+                            "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content),
+                        }
+                        async for m in message_history if m != message #and m.author != discordbot.user
+                    ]
+                    history.reverse()
+                    history.append({
+                        "role": "user",
+                        "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
+                    })
+                    chatgpt_message_history.extend(history)
+
+                response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
+                await message.reply(response)
+                # await message.reply("debug response")
         except asyncio.TimeoutError:
             await message.add_reaction("⌚")
 
