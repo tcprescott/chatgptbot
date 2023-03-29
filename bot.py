@@ -71,7 +71,7 @@ async def on_message(message: discord.Message):
                 ]
                 loop = asyncio.get_event_loop()
                 response = await loop.run_in_executor(None, chatgpt_completion, prompt)
-                await message.reply(response)
+                await message.reply(response, mention_author=False)
                 # await message.reply("debug response")
         except asyncio.TimeoutError:
             await message.add_reaction("⌚")
