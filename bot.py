@@ -56,7 +56,7 @@ async def on_message(message: discord.Message):
                     chatgpt_message_history = [
                         {
                             "role": "assistant" if m.author == discordbot.user else "user",
-                            "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content),
+                            "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content[:400]),
                         }
                         async for m in message_history if m != message  # and m.author != discordbot.user
                     ]
@@ -93,7 +93,7 @@ async def get_reply_history(message: discord.Message):
         messages.append(
             {
                 "role": "assistant" if message.author == discordbot.user else "user",
-                "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
+                "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content[:400]),
             }
         )
         if message.reference:
@@ -141,7 +141,7 @@ def is_rate_limited(member: discord.Member):
 
 def context_fusion_history(history: List[dict]):
     result = "Message history:\n" + "\n".join(
-        f"{m['role']}: {m['content']}" for m in history
+        f"{m['role']}: {m['content'][:400]}" for m in history
     )
     return result
 
