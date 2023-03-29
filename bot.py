@@ -39,37 +39,48 @@ async def on_message(message: discord.Message):
         #     return
 
         try:
-            chatgpt_message_history = [
-                {
-                    "role": "system",
-                    "content": settings.initial_context,
-                }
-            ]
+            # chatgpt_message_history = [
+            #     {
+            #         "role": "system",
+            #         "content": settings.initial_context,
+            #     }
+            # ]
             async with message.channel.typing():
                 if message.reference:
-                    chatgpt_message_history.extend(await get_reply_history(message))
+                    referenced_message = await message.channel.fetch_message(message.reference.message_id)
+                    chatgpt_message_history = await get_reply_history(referenced_message)
                 elif message.mentions and discordbot.user in message.mentions:
-                    chatgpt_message_history.append({
-                        "role": "user",
-                        "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
-                    })
+                    chatgpt_message_history = []
                 else:
                     message_history = message.channel.history(limit=8)
-                    history = [
+                    chatgpt_message_history = [
                         {
                             "role": "assistant" if m.author == discordbot.user else "user",
                             "content": re.sub(REGEX_USERS_AND_ROLES, '', m.content),
                         }
-                        async for m in message_history if m != message #and m.author != discordbot.user
+                        async for m in message_history if m != message  # and m.author != discordbot.user
                     ]
-                    history.reverse()
-                    history.append({
+                    chatgpt_message_history.reverse()
+
+                system_prompt = f"""
+                {context_fusion_history(chatgpt_message_history)}
+                ---
+                {settings.initial_context}
+                When answering the user, take the message history into account.
+                """
+
+                prompt = [
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
                         "role": "user",
                         "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
-                    })
-                    chatgpt_message_history.extend(history)
-
-                response = await asyncio.wait_for(chatgpt_completion(chatgpt_message_history), timeout=10)
+                    }
+                ]
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, chatgpt_completion, prompt)
                 await message.reply(response)
                 # await message.reply("debug response")
         except asyncio.TimeoutError:
@@ -128,15 +139,21 @@ def is_rate_limited(member: discord.Member):
     return False
 
 
-async def chatgpt_completion(history: List[dict]):
-    async with semaphore:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=history,
-            temperature=0.8,
-            max_tokens=256,
-        )
-        return response.choices[0].message.content
+def context_fusion_history(history: List[dict]):
+    result = "Message history:\n" + "\n".join(
+        f"{m['role']}: {m['content']}" for m in history
+    )
+    return result
+
+
+def chatgpt_completion(history: List[dict]):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=history,
+        temperature=0.8,
+        max_tokens=256,
+    )
+    return response.choices[0].message.content
 
 
 if __name__ == "__main__":
