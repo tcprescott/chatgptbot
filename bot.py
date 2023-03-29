@@ -33,18 +33,8 @@ async def on_message(message: discord.Message):
     if message.author == discordbot.user:
         return
 
-    if rlmode := should_respond(message):
-        # if is_rate_limited(message.author) and rlmode == 1:
-        #     await message.add_reaction("⏱️")
-        #     return
-
+    if should_respond(message):
         try:
-            # chatgpt_message_history = [
-            #     {
-            #         "role": "system",
-            #         "content": settings.initial_context,
-            #     }
-            # ]
             async with message.channel.typing():
                 if message.reference:
                     referenced_message = await message.channel.fetch_message(message.reference.message_id)
@@ -76,7 +66,7 @@ async def on_message(message: discord.Message):
                     },
                     {
                         "role": "user",
-                        "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content),
+                        "content": re.sub(REGEX_USERS_AND_ROLES, '', message.content[:200]),
                     }
                 ]
                 loop = asyncio.get_event_loop()
